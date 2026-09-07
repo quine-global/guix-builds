@@ -13,11 +13,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Install Dagger CLI
+        run: |
+          curl -fsSL https://dl.dagger.io/dagger/install.sh | DAGGER_VERSION=v0.20.6 BIN_DIR="$HOME/.local/bin" sh
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
       - name: Build and export the ISO
-        uses: dagger/dagger-for-github@v8
-        with:
-          version: "0.20.6"
-          call: "build export --path=./out/guix-install-x86_64-linux.iso"
+        run: dagger call build export --path=./out/guix-install-x86_64-linux.iso
 
       - name: Publish ISO as a release asset
         uses: softprops/action-gh-release@v2
