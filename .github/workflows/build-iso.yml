@@ -1,0 +1,35 @@
+name: Build Guix ISO
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build and export the ISO
+        uses: dagger/dagger-for-github@v8
+        with:
+          version: "0.20.6"
+          call: "build export --path=./out/guix-install-x86_64-linux.iso"
+
+      - name: Publish ISO as a release asset
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: "iso-${{ github.run_number }}"
+          name: "Guix Install ISO (x86_64) — build ${{ github.run_number }}"
+          body: |
+            Reproducible Guix installation ISO, cross-built from the pinned
+            channel in `channels.scm`.
+
+            - Target: x86_64-linux
+            - Build: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          files: out/guix-install-x86_64-linux.iso
+          draft: false
+          prerelease: false
