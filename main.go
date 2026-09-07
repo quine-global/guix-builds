@@ -57,7 +57,9 @@ func (m *GuixIso) Build(ctx context.Context) *dagger.File {
 
 	return setup().
 		WithMountedDirectory("/workspace", src).
-		WithExec([]string{"bash", "/workspace/build.sh"},
+		WithExec([]string{"bash", "/workspace/pull.sh"},
+			dagger.ContainerWithExecOpts{InsecureRootCapabilities: true}).
+		WithExec([]string{"bash", "/workspace/image.sh"},
 			dagger.ContainerWithExecOpts{InsecureRootCapabilities: true}).
 		File("/out/guix-install-" + arch + "-linux.iso")
 }

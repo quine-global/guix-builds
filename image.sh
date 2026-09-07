@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+export PATH="/root/.config/guix/current/bin:${PATH}"
+. /root/.config/guix/current/etc/profile
+
+rm -f /var/guix/daemon-socket/socket
+guix-daemon --build-users-group=guixbuild --max-jobs=4 --cores=4 &
+DAEMON_PID=$!
+trap 'kill $DAEMON_PID 2>/dev/null || true' EXIT
+
+for _ in $(seq 1 30); do
+  [ -S /var/guix/daemon-socket/socket ] && break
+  sleep 1
+done
+[ -S /var/guix/daemon-socket/socket ] || { echo "guix-daemon failed to start" >&2; exit 1; }
+
+# Build the installation ISO. Use the -e form: loading install.scm as a file
+# trips over module resolution inside the container.
+image="$(guix system image -t iso9660 -e '(@ (gnu system install) installation-os)')"
+echo "built image: ${image}"
+
+mkdir -p /out
+cp "${image}" /out/guix-install-x86_64-linux.iso
+ls -lh /out
