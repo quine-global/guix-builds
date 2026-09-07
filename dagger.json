@@ -1,0 +1,8 @@
+{
+  "name": "guix-iso",
+  "engineVersion": "v0.20.6",
+  "sdk": {
+    "source": "go"
+  },
+  "source": "."
+}
