@@ -16,7 +16,17 @@ done
 [ -S /var/guix/daemon-socket/socket ] || { echo "guix-daemon failed to start" >&2; exit 1; }
 
 # Pull the pinned channels (updates ~/.config/guix/current).
-guix pull --channels=/workspace/channels.scm
+PULL_OK=0
+for attempt in $(seq 1 5); do
+  echo "guix pull: attempt ${attempt}/5"
+  if guix pull --channels=/workspace/channels.scm; then
+    PULL_OK=1
+    break
+  fi
+  echo "guix pull failed; retrying in 5s..."
+  sleep 5
+done
+[ "${PULL_OK}" = "1" ] || { echo "guix pull failed after retries" >&2; exit 1; }
 
 # Switch to the freshly pulled guix.
 export PATH="/root/.config/guix/current/bin:${PATH}"

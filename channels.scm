@@ -2,7 +2,7 @@
 ;; bump the commit (or branch) here and rebuild.
 (list (channel
         (name 'guix)
-        (url "https://git.savannah.gnu.org/git/guix.git")
+        (url "https://codeberg.org/guix/guix.git")
         (branch "master")
         (commit "d759a1922126909b6097e245631669cf0b368b57")
         (introduction

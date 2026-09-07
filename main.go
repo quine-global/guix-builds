@@ -44,7 +44,7 @@ func setup() *dagger.Container {
 		WithEnvVariable("DEBIAN_FRONTEND", "noninteractive").
 		WithExec([]string{"apt-get", "update"}).
 		WithExec([]string{"apt-get", "install", "-y", "--no-install-recommends",
-			"curl", "ca-certificates", "xz-utils", "gnupg", "passwd"}).
+			"curl", "ca-certificates", "xz-utils", "gnupg", "passwd", "netbase"}).
 		WithExec([]string{"curl", "-fsSL", "-o", "/tmp/" + tarball,
 			"https://ftp.gnu.org/gnu/guix/" + tarball}).
 		WithExec([]string{"tar", "-C", "/", "--warning=no-timestamp", "-xf", "/tmp/" + tarball}).
@@ -57,7 +57,8 @@ func (m *GuixIso) Build(ctx context.Context) *dagger.File {
 
 	return setup().
 		WithMountedDirectory("/workspace", src).
-		WithExec([]string{"bash", "/workspace/build.sh"}).
+		WithExec([]string{"bash", "/workspace/build.sh"},
+			dagger.ContainerWithExecOpts{InsecureRootCapabilities: true}).
 		File("/out/guix-install-" + arch + "-linux.iso")
 }
 
