@@ -1,9 +1,10 @@
 // A Dagger module that builds a reproducible Guix installation ISO
-// inside a container (cross-built for x86_64).
+// inside a container (built for x86_64 by default; pass --arch for arm64).
 //
 // Edit channels.scm to change which Guix commit is used, then run:
 //
 //	dagger call build export --path=./guix-install-x86_64-linux.iso
+//	dagger call build --arch=aarch64 export --path=./guix-install-aarch64-linux.iso
 
 package main
 
@@ -13,12 +14,13 @@ import (
 	"dagger/guix-iso/internal/dagger"
 )
 
-const (
-	guixVersion = "1.5.0"
-	arch        = "x86_64"
-	platform    = "linux/amd64"
-	tarball     = "guix-binary-" + guixVersion + "." + arch + "-linux.tar.xz"
-)
+const guixVersion = "1.5.0"
+
+// platformFor maps a Guix system string to the Dagger container platform.
+var platformFor = map[string]dagger.Platform{
+	"x86_64":  "linux/amd64",
+	"aarch64": "linux/arm64",
+}
 
 // setupScript runs after the tarball is extracted; it creates the build
 // users and authorizes the substitute servers. It has no dependency on
@@ -37,9 +39,11 @@ GUIX=/var/guix/profiles/per-user/root/current-guix/bin/guix
 
 type GuixIso struct{}
 
-// setup builds the x86_64 container with Guix installed (daemon not started).
-func setup() *dagger.Container {
-	return dag.Container(dagger.ContainerOpts{Platform: platform}).
+// setup builds a container with Guix installed for the given architecture
+// (daemon not started).
+func setup(arch string) *dagger.Container {
+	tarball := "guix-binary-" + guixVersion + "." + arch + "-linux.tar.xz"
+	return dag.Container(dagger.ContainerOpts{Platform: platformFor[arch]}).
 		From("debian:stable-slim").
 		WithEnvVariable("DEBIAN_FRONTEND", "noninteractive").
 		WithExec([]string{"apt-get", "update"}).
@@ -52,19 +56,34 @@ func setup() *dagger.Container {
 }
 
 // Build assembles the Guix installation ISO and returns it as a file.
-func (m *GuixIso) Build(ctx context.Context) *dagger.File {
+func (m *GuixIso) Build(
+	ctx context.Context,
+	// Architecture of the ISO: "x86_64" or "aarch64".
+	// +optional
+	arch string,
+) *dagger.File {
+	if arch == "" {
+		arch = "x86_64"
+	}
+
 	src := dag.CurrentModule().Source()
 
-	return setup().
+	return setup(arch).
 		WithMountedDirectory("/workspace", src).
 		WithExec([]string{"bash", "/workspace/pull.sh"},
 			dagger.ContainerWithExecOpts{InsecureRootCapabilities: true}).
-		WithExec([]string{"bash", "/workspace/image.sh"},
+		WithExec([]string{"bash", "/workspace/image.sh", arch},
 			dagger.ContainerWithExecOpts{InsecureRootCapabilities: true}).
 		File("/out/guix-install-" + arch + "-linux.iso")
 }
 
 // Debug returns the setup container for inspection without running the build.
-func (m *GuixIso) Debug() *dagger.Container {
-	return setup()
+func (m *GuixIso) Debug(
+	// +optional
+	arch string,
+) *dagger.Container {
+	if arch == "" {
+		arch = "x86_64"
+	}
+	return setup(arch)
 }

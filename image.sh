@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+arch="${1:-x86_64}"
+
 export PATH="/root/.config/guix/current/bin:${PATH}"
 . /root/.config/guix/current/etc/profile
 
@@ -21,5 +23,5 @@ image="$(guix system image -t iso9660 -e '(@ (gnu system install) installation-o
 echo "built image: ${image}"
 
 mkdir -p /out
-cp "${image}" /out/guix-install-x86_64-linux.iso
+cp "${image}" "/out/guix-install-${arch}-linux.iso"
 ls -lh /out

@@ -9,6 +9,14 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x86_64
+            system: x86_64-linux
+          - arch: aarch64
+            system: aarch64-linux
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -19,19 +27,19 @@ jobs:
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
       - name: Build and export the ISO
-        run: dagger call build export --path=./out/guix-install-x86_64-linux.iso
+        run: dagger call build --arch=${{ matrix.arch }} export --path=./out/guix-install-${{ matrix.arch }}-linux.iso
 
       - name: Publish ISO as a release asset
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: "iso-${{ github.run_number }}"
-          name: "Guix Install ISO (x86_64) — build ${{ github.run_number }}"
+          tag_name: "iso-${{ github.run_number }}-${{ matrix.arch }}"
+          name: "Guix Install ISO (${{ matrix.arch }}) — build ${{ github.run_number }}"
           body: |
-            Reproducible Guix installation ISO, cross-built from the pinned
+            Reproducible Guix installation ISO, built from the pinned
             channel in `channels.scm`.
 
-            - Target: x86_64-linux
+            - Target: ${{ matrix.system }}
             - Build: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          files: out/guix-install-x86_64-linux.iso
+          files: out/guix-install-${{ matrix.arch }}-linux.iso
           draft: false
           prerelease: false
