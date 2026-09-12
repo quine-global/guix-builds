@@ -15,8 +15,10 @@ jobs:
         include:
           - arch: x86_64
             system: x86_64-linux
+            ext: iso
           - arch: aarch64
             system: aarch64-linux
+            ext: raw
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -26,20 +28,20 @@ jobs:
           curl -fsSL https://dl.dagger.io/dagger/install.sh | DAGGER_VERSION=v0.20.6 BIN_DIR="$HOME/.local/bin" sh
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
-      - name: Build and export the ISO
-        run: dagger call build --arch=${{ matrix.arch }} export --path=./out/guix-install-${{ matrix.arch }}-linux.iso
+      - name: Build and export the image
+        run: dagger call build --arch=${{ matrix.arch }} export --path=./out/guix-install-${{ matrix.arch }}-linux.${{ matrix.ext }}
 
-      - name: Publish ISO as a release asset
+      - name: Publish image as a release asset
         uses: softprops/action-gh-release@v2
         with:
           tag_name: "iso-${{ github.run_number }}-${{ matrix.arch }}"
-          name: "Guix Install ISO (${{ matrix.arch }}) — build ${{ github.run_number }}"
+          name: "Guix Install Image (${{ matrix.arch }}) — build ${{ github.run_number }}"
           body: |
-            Reproducible Guix installation ISO, built from the pinned
+            Reproducible Guix installation image, built from the pinned
             channel in `channels.scm`.
 
             - Target: ${{ matrix.system }}
             - Build: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          files: out/guix-install-${{ matrix.arch }}-linux.iso
+          files: out/guix-install-${{ matrix.arch }}-linux.${{ matrix.ext }}
           draft: false
           prerelease: false

@@ -1,10 +1,10 @@
-// A Dagger module that builds a reproducible Guix installation ISO
-// inside a container (built for x86_64 by default; pass --arch for arm64).
+// A Dagger module that builds a reproducible Guix installation image
+// inside a container (x86_64 ISO by default; pass --arch for arm64).
 //
 // Edit channels.scm to change which Guix commit is used, then run:
 //
 //	dagger call build export --path=./guix-install-x86_64-linux.iso
-//	dagger call build --arch=aarch64 export --path=./guix-install-aarch64-linux.iso
+//	dagger call build --arch=aarch64 export --path=./guix-install-aarch64-linux.raw
 
 package main
 
@@ -66,6 +66,12 @@ func (m *GuixIso) Build(
 		arch = "x86_64"
 	}
 
+	// x86_64 produces an ISO (BIOS boot); aarch64 produces a raw EFI image.
+	ext := "iso"
+	if arch == "aarch64" {
+		ext = "raw"
+	}
+
 	src := dag.CurrentModule().Source()
 
 	return setup(arch).
@@ -74,7 +80,7 @@ func (m *GuixIso) Build(
 			dagger.ContainerWithExecOpts{InsecureRootCapabilities: true}).
 		WithExec([]string{"bash", "/workspace/image.sh", arch},
 			dagger.ContainerWithExecOpts{InsecureRootCapabilities: true}).
-		File("/out/guix-install-" + arch + "-linux.iso")
+		File("/out/guix-install-" + arch + "-linux." + ext)
 }
 
 // Debug returns the setup container for inspection without running the build.
