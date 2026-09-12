@@ -19,16 +19,20 @@ done
 
 # Build the installation image. Use the -e form: loading install.scm as a file
 # trips over module resolution inside the container.
-# x86_64 boots via BIOS (iso9660); aarch64 boots via UEFI (efi-raw).
+# x86_64 boots via BIOS (iso9660, grub-bootloader); aarch64 boots via UEFI
+# (efi-raw, grub-efi). The installer hardcodes a BIOS bootloader unless built
+# with #:efi-only? #t, so set that for aarch64.
 if [ "${arch}" = "aarch64" ]; then
   image_type="efi-raw"
   ext="raw"
+  image_expr='((@ (gnu system install) make-installation-os) #:efi-only? #t)'
 else
   image_type="iso9660"
   ext="iso"
+  image_expr='(@ (gnu system install) installation-os)'
 fi
 
-image="$(guix system image --verbosity=3 -t "${image_type}" -e '(@ (gnu system install) installation-os)')"
+image="$(guix system image --verbosity=3 -t "${image_type}" -e "${image_expr}")"
 echo "built image: ${image}"
 
 mkdir -p /out
