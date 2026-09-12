@@ -32,7 +32,7 @@ else
   image_expr='(@ (gnu system install) installation-os)'
 fi
 
-image="$(guix system image --verbosity=3 -t "${image_type}" -e "${image_expr}")"
+image="$(guix system image --verbosity=3 --fallback -t "${image_type}" -e "${image_expr}")"
 echo "built image: ${image}"
 
 mkdir -p /out

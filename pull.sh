@@ -28,7 +28,7 @@ for attempt in $(seq 1 5); do
   echo "guix pull: attempt ${attempt}/5"
   stop_daemon
   start_daemon || { echo "guix-daemon failed to start" >&2; exit 1; }
-  if guix pull --verbosity=3 --channels=/workspace/channels.scm; then
+  if guix pull --verbosity=3 --fallback --channels=/workspace/channels.scm; then
     PULL_OK=1
     break
   fi
