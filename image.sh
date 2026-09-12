@@ -19,7 +19,7 @@ done
 
 # Build the installation ISO. Use the -e form: loading install.scm as a file
 # trips over module resolution inside the container.
-image="$(guix system image -t iso9660 -e '(@ (gnu system install) installation-os)')"
+image="$(guix system image --verbosity=3 -t iso9660 -e '(@ (gnu system install) installation-os)')"
 echo "built image: ${image}"
 
 mkdir -p /out

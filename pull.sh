@@ -17,7 +17,7 @@ done
 PULL_OK=0
 for attempt in $(seq 1 5); do
   echo "guix pull: attempt ${attempt}/5"
-  if guix pull --channels=/workspace/channels.scm; then
+  if guix pull --verbosity=3 --channels=/workspace/channels.scm; then
     PULL_OK=1
     break
   fi
