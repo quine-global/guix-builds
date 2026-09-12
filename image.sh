@@ -7,7 +7,7 @@ export PATH="/root/.config/guix/current/bin:${PATH}"
 . /root/.config/guix/current/etc/profile
 
 rm -f /var/guix/daemon-socket/socket
-guix-daemon --disable-chroot --build-users-group=guixbuild --max-jobs=4 --cores=4 &
+guix-daemon --disable-chroot --max-jobs=2 --cores=2 --max-silent-time=0 --build-users-group=guixbuild &
 DAEMON_PID=$!
 trap 'kill $DAEMON_PID 2>/dev/null || true' EXIT
 
