@@ -37,4 +37,8 @@ echo "built image: ${image}"
 
 mkdir -p /out
 cp "${image}" "/out/guix-install-${arch}-linux.${ext}"
+if [ "${arch}" = "aarch64" ]; then
+  # Raw EFI images exceed GitHub's 2 GiB release-asset limit, so compress them.
+  xz -6 "/out/guix-install-${arch}-linux.${ext}"
+fi
 ls -lh /out

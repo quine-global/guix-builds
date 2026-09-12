@@ -18,7 +18,7 @@ jobs:
             ext: iso
           - arch: aarch64
             system: aarch64-linux
-            ext: raw
+            ext: raw.xz
     steps:
       - name: Checkout
         uses: actions/checkout@v4

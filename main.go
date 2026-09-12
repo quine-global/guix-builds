@@ -4,7 +4,7 @@
 // Edit channels.scm to change which Guix commit is used, then run:
 //
 //	dagger call build export --path=./guix-install-x86_64-linux.iso
-//	dagger call build --arch=aarch64 export --path=./guix-install-aarch64-linux.raw
+//	dagger call build --arch=aarch64 export --path=./guix-install-aarch64-linux.raw.xz
 
 package main
 
@@ -66,10 +66,11 @@ func (m *GuixIso) Build(
 		arch = "x86_64"
 	}
 
-	// x86_64 produces an ISO (BIOS boot); aarch64 produces a raw EFI image.
+	// x86_64 produces an ISO (BIOS boot); aarch64 produces a raw EFI image
+	// (xz-compressed, since the raw image exceeds GitHub's asset limit).
 	ext := "iso"
 	if arch == "aarch64" {
-		ext = "raw"
+		ext = "raw.xz"
 	}
 
 	src := dag.CurrentModule().Source()
