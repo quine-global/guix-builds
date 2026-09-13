@@ -1,6 +1,5 @@
 // A Dagger module that builds a reproducible Guix installation image
-// inside a native amd64 container, cross-building the target architecture
-// with --target (no QEMU emulation).
+// inside a container (x86_64 ISO by default; pass --arch for arm64).
 //
 // Edit channels.scm to change which Guix commit is used, then run:
 //
@@ -17,11 +16,11 @@ import (
 
 const guixVersion = "1.5.0"
 
-// We always build in a native amd64 container (GitHub runners are x86_64) and
-// cross-build the image for the requested architecture, so the heavy
-// compilation runs at native speed instead of under QEMU emulation.
-const buildPlatform = dagger.Platform("linux/amd64")
-const tarball = "guix-binary-" + guixVersion + ".x86_64-linux.tar.xz"
+// platformFor maps a Guix system string to the Dagger container platform.
+var platformFor = map[string]dagger.Platform{
+	"x86_64":  "linux/amd64",
+	"aarch64": "linux/arm64",
+}
 
 // setupScript runs after the tarball is extracted; it creates the build
 // users and authorizes the substitute servers. It has no dependency on
@@ -47,9 +46,11 @@ func normalizeArch(arch string) string {
 	return arch
 }
 
-// setup builds an amd64 container with Guix installed (daemon not started).
-func setup() *dagger.Container {
-	return dag.Container(dagger.ContainerOpts{Platform: buildPlatform}).
+// setup builds a container with Guix installed for the given architecture
+// (daemon not started).
+func setup(arch string) *dagger.Container {
+	tarball := "guix-binary-" + guixVersion + "." + arch + "-linux.tar.xz"
+	return dag.Container(dagger.ContainerOpts{Platform: platformFor[arch]}).
 		From("debian:stable-slim").
 		WithEnvVariable("DEBIAN_FRONTEND", "noninteractive").
 		WithExec([]string{"apt-get", "update"}).
@@ -64,7 +65,7 @@ func setup() *dagger.Container {
 // buildContainer runs the full pull + image build.
 func buildContainer(arch string) *dagger.Container {
 	src := dag.CurrentModule().Source()
-	return setup().
+	return setup(arch).
 		WithMountedDirectory("/workspace", src).
 		WithExec([]string{"bash", "/workspace/pull.sh"},
 			dagger.ContainerWithExecOpts{InsecureRootCapabilities: true}).
@@ -85,6 +86,9 @@ func (m *GuixIso) Build(
 }
 
 // Debug returns the setup container for inspection without running the build.
-func (m *GuixIso) Debug() *dagger.Container {
-	return setup()
+func (m *GuixIso) Debug(
+	// +optional
+	arch string,
+) *dagger.Container {
+	return setup(normalizeArch(arch))
 }

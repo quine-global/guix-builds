@@ -65,9 +65,13 @@ git -C "$SRC" -c user.email=debug@invalid -c user.name=debug commit -q --no-gpg-
 NEW_COMMIT="$(git -C "$SRC" rev-parse HEAD)"
 echo "patched commit: $NEW_COMMIT"
 
+# Name the channel something other than 'guix' so Guix does not try to
+# authenticate it (the 'guix' channel name is special: without an introduction
+# it is rejected unless --disable-authentication is given, which guix system
+# does not support).
 cat > /tmp/channels-local.scm <<EOF
 (list (channel
-        (name 'guix)
+        (name 'guix-patched)
         (url "file://$SRC")
         (commit "$NEW_COMMIT")))
 EOF
