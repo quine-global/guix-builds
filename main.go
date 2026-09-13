@@ -62,7 +62,7 @@ func setup(arch string, cache *dagger.File) *dagger.Container {
 		WithEnvVariable("DEBIAN_FRONTEND", "noninteractive").
 		WithExec([]string{"apt-get", "update"}).
 		WithExec([]string{"apt-get", "install", "-y", "--no-install-recommends",
-			"curl", "ca-certificates", "xz-utils", "gnupg", "passwd", "netbase"}).
+			"curl", "ca-certificates", "xz-utils", "gnupg", "passwd", "netbase", "git", "python3"}).
 		WithExec([]string{"curl", "-fsSL", "-o", "/tmp/" + tarball,
 			"https://ftp.gnu.org/gnu/guix/" + tarball}).
 		WithExec([]string{"tar", "-C", "/", "--warning=no-timestamp", "-xf", "/tmp/" + tarball}).
