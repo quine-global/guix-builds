@@ -1,17 +1,11 @@
 // A Dagger module that builds a reproducible Guix installation image
-// inside a container (x86_64 ISO by default; pass --arch for arm64).
+// inside a native amd64 container, cross-building the target architecture
+// with --target (no QEMU emulation).
 //
 // Edit channels.scm to change which Guix commit is used, then run:
 //
 //	dagger call build export --path=./out
 //	dagger call build --arch=aarch64 export --path=./out
-//
-// The exported directory contains the installation image plus a
-// guix-cache.tar.gz store snapshot. Feed that snapshot back via --cache on
-// the next run to skip recompiling derivations:
-//
-//	dagger call build --arch=aarch64 --cache=./cache/guix-cache.tar.gz \
-//	    export --path=./out
 
 package main
 
@@ -23,11 +17,11 @@ import (
 
 const guixVersion = "1.5.0"
 
-// platformFor maps a Guix system string to the Dagger container platform.
-var platformFor = map[string]dagger.Platform{
-	"x86_64":  "linux/amd64",
-	"aarch64": "linux/arm64",
-}
+// We always build in a native amd64 container (GitHub runners are x86_64) and
+// cross-build the image for the requested architecture, so the heavy
+// compilation runs at native speed instead of under QEMU emulation.
+const buildPlatform = dagger.Platform("linux/amd64")
+const tarball = "guix-binary-" + guixVersion + ".x86_64-linux.tar.xz"
 
 // setupScript runs after the tarball is extracted; it creates the build
 // users and authorizes the substitute servers. It has no dependency on
@@ -53,11 +47,9 @@ func normalizeArch(arch string) string {
 	return arch
 }
 
-// setup builds a container with Guix installed for the given architecture,
-// restoring a previous store cache on top if provided (daemon not started).
-func setup(arch string, cache *dagger.File) *dagger.Container {
-	tarball := "guix-binary-" + guixVersion + "." + arch + "-linux.tar.xz"
-	c := dag.Container(dagger.ContainerOpts{Platform: platformFor[arch]}).
+// setup builds an amd64 container with Guix installed (daemon not started).
+func setup() *dagger.Container {
+	return dag.Container(dagger.ContainerOpts{Platform: buildPlatform}).
 		From("debian:stable-slim").
 		WithEnvVariable("DEBIAN_FRONTEND", "noninteractive").
 		WithExec([]string{"apt-get", "update"}).
@@ -67,51 +59,32 @@ func setup(arch string, cache *dagger.File) *dagger.Container {
 			"https://ftp.gnu.org/gnu/guix/" + tarball}).
 		WithExec([]string{"tar", "-C", "/", "--warning=no-timestamp", "-xf", "/tmp/" + tarball}).
 		WithExec([]string{"bash", "-c", setupScript})
-	if cache != nil {
-		c = c.WithMountedFile("/tmp/guix-cache.tar.gz", cache).
-			WithExec([]string{"bash", "-c",
-				"[ -s /tmp/guix-cache.tar.gz ] && tar -xzf /tmp/guix-cache.tar.gz -C / || true"})
-	}
-	return c
 }
 
-// buildContainer runs the full pull + image build, then snapshots the Guix
-// store (plus daemon database) into /out/guix-cache.tar.gz so it can be
-// reused on the next run. It returns the container with both artifacts in /out.
-func buildContainer(arch string, cache *dagger.File) *dagger.Container {
+// buildContainer runs the full pull + image build.
+func buildContainer(arch string) *dagger.Container {
 	src := dag.CurrentModule().Source()
-	return setup(arch, cache).
+	return setup().
 		WithMountedDirectory("/workspace", src).
 		WithExec([]string{"bash", "/workspace/pull.sh"},
 			dagger.ContainerWithExecOpts{InsecureRootCapabilities: true}).
 		WithExec([]string{"bash", "/workspace/image.sh", arch},
-			dagger.ContainerWithExecOpts{InsecureRootCapabilities: true}).
-		WithExec([]string{"bash", "-c",
-			"tar -czf /out/guix-cache.tar.gz -C / gnu/store var/guix/db var/guix/profiles root/.config/guix"})
+			dagger.ContainerWithExecOpts{InsecureRootCapabilities: true})
 }
 
-// Build assembles the Guix installation image and a snapshot of the Guix
-// store cache, and returns them as a directory containing:
-//
-//	guix-install-<arch>-linux.<ext>  the installation image
-//	guix-cache.tar.gz                store snapshot for reuse via --cache
+// Build assembles the Guix installation image and returns it as a directory
+// containing guix-install-<arch>-linux.<ext>.
 func (m *GuixIso) Build(
 	ctx context.Context,
 	// Architecture of the image: "x86_64" or "aarch64".
 	// +optional
 	arch string,
-	// Optional store cache from a previous build to reuse derivations.
-	// +optional
-	cache *dagger.File,
 ) *dagger.Directory {
 	arch = normalizeArch(arch)
-	return buildContainer(arch, cache).Directory("/out")
+	return buildContainer(arch).Directory("/out")
 }
 
 // Debug returns the setup container for inspection without running the build.
-func (m *GuixIso) Debug(
-	// +optional
-	arch string,
-) *dagger.Container {
-	return setup(normalizeArch(arch), nil)
+func (m *GuixIso) Debug() *dagger.Container {
+	return setup()
 }

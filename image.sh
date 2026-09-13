@@ -21,24 +21,27 @@ done
 # trips over module resolution inside the container.
 # x86_64 boots via BIOS (iso9660, grub-bootloader); aarch64 boots via UEFI
 # (efi-raw, grub-efi). The installer hardcodes a BIOS bootloader unless built
-# with #:efi-only? #t, so set that for aarch64.
+# with #:efi-only? #t, so set that for aarch64. aarch64 is cross-built with
+# --target from this native amd64 container.
 if [ "${arch}" = "aarch64" ]; then
   image_type="efi-raw"
   ext="raw"
   image_expr='((@ (gnu system install) make-installation-os) #:efi-only? #t)'
+  args=(--verbosity=3 --fallback --target=aarch64-linux-gnu -t "${image_type}" -e "${image_expr}")
 else
   image_type="iso9660"
   ext="iso"
   image_expr='(@ (gnu system install) installation-os)'
+  args=(--verbosity=3 --fallback -t "${image_type}" -e "${image_expr}")
 fi
 
-image="$(guix system image --verbosity=3 --fallback -t "${image_type}" -e "${image_expr}")"
+image="$(guix system image "${args[@]}")"
 echo "built image: ${image}"
 
 mkdir -p /out
 cp "${image}" "/out/guix-install-${arch}-linux.${ext}"
 if [ "${arch}" = "aarch64" ]; then
   # Raw EFI images exceed GitHub's 2 GiB release-asset limit, so compress them.
-  xz -6 "/out/guix-install-${arch}-linux.${ext}"
+  xz -T0 -6 "/out/guix-install-${arch}-linux.${ext}"
 fi
 ls -lh /out
