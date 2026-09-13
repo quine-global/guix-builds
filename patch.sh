@@ -14,12 +14,13 @@ COMMIT="$(grep -oE '\(commit "[0-9a-f]{40}"\)' "$CHANNELS" | grep -oE '[0-9a-f]{
 [ -n "$COMMIT" ] || { echo "error: no pinned commit in channels.scm" >&2; exit 1; }
 echo "pinned Guix commit: $COMMIT"
 
-# Shallow-clone just that commit.
+# Shallow-clone just that commit, landing on a branch so the patched commit
+# is reachable by ref (guix pull clones only refs, not a detached HEAD).
 rm -rf "$SRC"
 git init -q "$SRC"
 git -C "$SRC" remote add origin https://codeberg.org/guix/guix.git
 git -C "$SRC" fetch -q --depth 1 origin "$COMMIT"
-git -C "$SRC" checkout -q FETCH_HEAD
+git -C "$SRC" checkout -q -b patched FETCH_HEAD
 
 # Route shepherd's log to the console, so boot failures are visible on screen
 # instead of only in /var/log/messages.
