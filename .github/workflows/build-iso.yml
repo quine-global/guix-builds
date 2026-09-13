@@ -28,8 +28,29 @@ jobs:
           curl -fsSL https://dl.dagger.io/dagger/install.sh | DAGGER_VERSION=v0.20.6 BIN_DIR="$HOME/.local/bin" sh
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
-      - name: Build and export the image
-        run: dagger call build --arch=${{ matrix.arch }} export --path=./out/guix-install-${{ matrix.arch }}-linux.${{ matrix.ext }}
+      - name: Restore Guix store cache
+        id: cache
+        uses: actions/cache/restore@v4
+        with:
+          path: cache
+          key: guix-store-${{ matrix.arch }}
+
+      - name: Prepare cache placeholder
+        run: |
+          mkdir -p cache
+          [ -s cache/guix-cache.tar.gz ] || : > cache/guix-cache.tar.gz
+
+      - name: Build image and refresh store cache
+        run: dagger call build --arch=${{ matrix.arch }} --cache=./cache/guix-cache.tar.gz export --path=./out
+
+      - name: Move refreshed cache into place
+        run: mv -f ./out/guix-cache.tar.gz ./cache/guix-cache.tar.gz
+
+      - name: Save Guix store cache
+        uses: actions/cache/save@v4
+        with:
+          path: cache
+          key: guix-store-${{ matrix.arch }}
 
       - name: Publish image as a release asset
         uses: softprops/action-gh-release@v2
