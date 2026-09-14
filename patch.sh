@@ -16,12 +16,12 @@ COMMIT="$(grep -oE '\(commit "[0-9a-f]{40}"\)' "$CHANNELS" | grep -oE '[0-9a-f]{
 [ -n "$COMMIT" ] || { echo "error: no pinned commit in channels.scm" >&2; exit 1; }
 echo "pinned Guix commit: $COMMIT"
 
-# Shallow-clone the pinned commit, plus the keyring branch used for
-# authentication. Land on a branch so the patched commit is reachable by ref.
+# Clone the pinned commit (full history, so the checkout is not shallow and
+# guix pull's own clone can fetch every branch) plus the keyring branch.
 rm -rf "$SRC"
 git init -q "$SRC"
 git -C "$SRC" remote add origin https://codeberg.org/guix/guix.git
-git -C "$SRC" fetch -q --depth 1 origin "$COMMIT"
+git -C "$SRC" fetch -q origin "$COMMIT"
 git -C "$SRC" fetch -q origin keyring:keyring
 git -C "$SRC" checkout -q -b patched "$COMMIT"
 
