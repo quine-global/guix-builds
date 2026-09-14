@@ -37,10 +37,12 @@ git -C "$SRC" archive origin/keyring | tar -x -C /tmp/keyring
 for k in /tmp/keyring/*.key; do
   gpg --batch --import "$k" >/dev/null 2>&1 || true
 done
-git -C "$SRC" verify-commit "$COMMIT" 2>&1 | grep -q "Good signature" || {
+VERIFY_OUTPUT="$(git -C "$SRC" verify-commit "$COMMIT" 2>&1 || true)"
+echo "$VERIFY_OUTPUT"
+if ! grep -q "Good signature" <<< "$VERIFY_OUTPUT"; then
   echo "error: pinned commit $COMMIT failed signature verification" >&2
   exit 1
-}
+fi
 echo "verified pinned commit signature"
 
 # Route shepherd's log to the console, so boot failures are visible on screen
