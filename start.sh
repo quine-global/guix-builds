@@ -18,4 +18,5 @@ exec qemu-system-aarch64 \
   -drive if=virtio,format=qcow2,file=/Users/morkswork/Downloads/guix-install-aarch64-linux.qcow2 \
   -drive if=virtio,format=qcow2,file="$DIR/blank-32g.qcow2" \
   -nic user,model=virtio-net-pci \
+  -display none -serial stdio -monitor none \
   "$@"

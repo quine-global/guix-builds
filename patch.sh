@@ -115,6 +115,25 @@ p.write_text(s.replace(old, new, 1))
 print("patched shepherd-1.0 origin with starting-message patch")
 PY
 
+# Make connman verbose: run it with --debug and send its output to the console
+# instead of /var/log/connman.log, so a networking hang explains itself.
+python3 - "$SRC" <<'PY'
+import sys
+from pathlib import Path
+p = Path(sys.argv[1]) / "gnu/services/networking.scm"
+s = p.read_text()
+old = '"--nodnsproxy"'
+new = '"--nodnsproxy" "--debug"'
+assert s.count(old) == 1, f"expected one --nodnsproxy, found {s.count(old)}"
+s = s.replace(old, new, 1)
+old2 = '#:log-file "/var/log/connman.log"'
+new2 = '#:log-file "/dev/console"'
+assert s.count(old2) == 1, f"expected one connman.log, found {s.count(old2)}"
+s = s.replace(old2, new2, 1)
+p.write_text(s)
+print("patched connman to be verbose on the console")
+PY
+
 # Sign the patched tree as an orphan commit (no parent), so that guix pull's
 # clone never tries to fetch the pinned commit's absent parent.
 gpg --batch --import /workspace/keys/private.key >/dev/null 2>&1
