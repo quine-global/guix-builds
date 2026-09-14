@@ -25,7 +25,7 @@ git init -q "$SRC"
 git -C "$SRC" remote add origin https://codeberg.org/guix/guix.git
 git -C "$SRC" fetch -q --depth 1 origin "$COMMIT"
 git -C "$SRC" fetch -q --depth 1 origin refs/heads/keyring:refs/remotes/origin/keyring
-git -C "$SRC" checkout -q -b patched "$COMMIT"
+git -C "$SRC" checkout -q "$COMMIT"
 
 # Import the official signing keys and verify the pinned commit's signature,
 # so we patch a known-authentic base.
@@ -98,14 +98,17 @@ p.write_text(s.replace(old, new, 1))
 print("patched .guix-channel keyring-reference")
 PY
 
-# Sign the patched commit with our key.
+# Sign the patched tree as an orphan commit (no parent), so that guix pull's
+# clone never tries to fetch the pinned commit's absent parent.
 gpg --batch --import /workspace/keys/private.key >/dev/null 2>&1
+git -C "$SRC" checkout -q --orphan patched
 git -C "$SRC" add -A
 git -C "$SRC" \
   -c user.email=debug@guix-iso.invalid \
   -c user.name="guix-iso debug" \
   -c user.signingkey="$FINGERPRINT" \
   commit -q -S -m "debug: console shepherd log + verbose kernel"
+rm -f "$SRC/.git/shallow"
 NEW_COMMIT="$(git -C "$SRC" rev-parse HEAD)"
 echo "patched commit: $NEW_COMMIT"
 
