@@ -108,6 +108,10 @@ git -C "$SRC" \
   -c user.name="guix-iso debug" \
   -c user.signingkey="$FINGERPRINT" \
   commit -q -S -m "debug: console shepherd log + verbose kernel"
+# Drop the keyring ref (only needed for the integrity check above) and the
+# shallow marker, so guix pull's clone only sees the self-contained orphan
+# commit.
+git -C "$SRC" update-ref -d refs/remotes/origin/keyring
 rm -f "$SRC/.git/shallow"
 NEW_COMMIT="$(git -C "$SRC" rev-parse HEAD)"
 echo "patched commit: $NEW_COMMIT"
