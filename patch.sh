@@ -98,23 +98,6 @@ p.write_text(s.replace(old, new, 1))
 print("patched .guix-channel keyring-reference")
 PY
 
-# Patch shepherd itself so it prints "Starting service ..." before running
-# each service's start procedure. That way a hung service names itself on the
-# console (the boot path only printed "has been started" after success).
-mkdir -p "$SRC/gnu/packages/patches"
-cp /workspace/patches/shepherd-starting-message.patch "$SRC/gnu/packages/patches/"
-python3 - "$SRC" <<'PY'
-import sys
-from pathlib import Path
-p = Path(sys.argv[1]) / "gnu/packages/admin.scm"
-s = p.read_text()
-old = '"1mh080060lnycys8yq6kkiy363wif8dsip3nyklgd3a1r22wb274"))))'
-new = '"1mh080060lnycys8yq6kkiy363wif8dsip3nyklgd3a1r22wb274"))\n              (patches (search-patches "shepherd-starting-message.patch"))))'
-assert s.count(old) == 1, f"expected one shepherd-1.0 sha256, found {s.count(old)}"
-p.write_text(s.replace(old, new, 1))
-print("patched shepherd-1.0 origin with starting-message patch")
-PY
-
 # Make connman verbose: run it with --debug and send its output to the console
 # instead of /var/log/connman.log, so a networking hang explains itself.
 python3 - "$SRC" <<'PY'
