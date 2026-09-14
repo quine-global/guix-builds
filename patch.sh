@@ -23,7 +23,7 @@ git init -q "$SRC"
 git -C "$SRC" remote add origin https://codeberg.org/guix/guix.git
 git -C "$SRC" fetch -q --depth 1 origin "$COMMIT"
 git -C "$SRC" fetch -q origin keyring
-git -C "$SRC" checkout -q -b patched FETCH_HEAD
+git -C "$SRC" checkout -q -b patched "$COMMIT"
 
 # Import the official signing keys and verify the pinned commit's signature,
 # so we patch a known-authentic base.
