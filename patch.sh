@@ -16,15 +16,15 @@ COMMIT="$(grep -oE '\(commit "[0-9a-f]{40}"\)' "$CHANNELS" | grep -oE '[0-9a-f]{
 [ -n "$COMMIT" ] || { echo "error: no pinned commit in channels.scm" >&2; exit 1; }
 echo "pinned Guix commit: $COMMIT"
 
-# Shallow-clone the pinned commit and the keyring branch (the keyring tip's
-# tree already contains every authorized key, so no history is needed). A
-# shallow repo avoids the full ~1 GiB history that makes guix pull's own clone
-# fail.
+# Shallow-clone the pinned commit. The keyring branch is fetched only as a
+# remote-tracking ref (for the local integrity check below), NOT as a local
+# branch, so that guix pull's own clone of this repo only sees the 'patched'
+# branch and never trips over the keyring tip.
 rm -rf "$SRC"
 git init -q "$SRC"
 git -C "$SRC" remote add origin https://codeberg.org/guix/guix.git
 git -C "$SRC" fetch -q --depth 1 origin "$COMMIT"
-git -C "$SRC" fetch -q --depth 1 origin keyring:keyring
+git -C "$SRC" fetch -q --depth 1 origin refs/heads/keyring:refs/remotes/origin/keyring
 git -C "$SRC" checkout -q -b patched "$COMMIT"
 
 # Import the official signing keys and verify the pinned commit's signature,
@@ -79,6 +79,23 @@ new = '''        "verbose"))'''
 assert s.count(old) == 1, f"expected one 'quiet' kernel arg, found {s.count(old)}"
 p.write_text(s.replace(old, new, 1))
 print("patched %default-kernel-arguments")
+PY
+
+# Point the channel's keyring-reference at the main branch. The keyring is
+# loaded (unconditionally) but never used for verification, because
+# first-signed-commit equals the channel commit (an empty commit range). So an
+# empty keyring off the 'patched' branch is fine and avoids needing a separate
+# keyring branch that libgit2 refuses to fetch.
+python3 - "$SRC" <<'PY'
+import sys
+from pathlib import Path
+p = Path(sys.argv[1]) / ".guix-channel"
+s = p.read_text()
+old = '''(keyring-reference "keyring")'''
+new = '''(keyring-reference "patched")'''
+assert old in s, "keyring-reference not found in .guix-channel"
+p.write_text(s.replace(old, new, 1))
+print("patched .guix-channel keyring-reference")
 PY
 
 # Sign the patched commit with our key.
