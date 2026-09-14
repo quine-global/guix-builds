@@ -16,13 +16,15 @@ COMMIT="$(grep -oE '\(commit "[0-9a-f]{40}"\)' "$CHANNELS" | grep -oE '[0-9a-f]{
 [ -n "$COMMIT" ] || { echo "error: no pinned commit in channels.scm" >&2; exit 1; }
 echo "pinned Guix commit: $COMMIT"
 
-# Clone the pinned commit (full history, so the checkout is not shallow and
-# guix pull's own clone can fetch every branch) plus the keyring branch.
+# Shallow-clone the pinned commit and the keyring branch (the keyring tip's
+# tree already contains every authorized key, so no history is needed). A
+# shallow repo avoids the full ~1 GiB history that makes guix pull's own clone
+# fail.
 rm -rf "$SRC"
 git init -q "$SRC"
 git -C "$SRC" remote add origin https://codeberg.org/guix/guix.git
-git -C "$SRC" fetch -q origin "$COMMIT"
-git -C "$SRC" fetch -q origin keyring:keyring
+git -C "$SRC" fetch -q --depth 1 origin "$COMMIT"
+git -C "$SRC" fetch -q --depth 1 origin keyring:keyring
 git -C "$SRC" checkout -q -b patched "$COMMIT"
 
 # Import the official signing keys and verify the pinned commit's signature,
