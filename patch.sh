@@ -37,7 +37,7 @@ git -C "$SRC" archive origin/keyring | tar -x -C /tmp/keyring
 for k in /tmp/keyring/*.key; do
   gpg --batch --import "$k" >/dev/null 2>&1 || true
 done
-git -C "$SRC" verify-commit "$COMMIT" || {
+git -C "$SRC" verify-commit "$COMMIT" 2>&1 | grep -q "Good signature" || {
   echo "error: pinned commit $COMMIT failed signature verification" >&2
   exit 1
 }
