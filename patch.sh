@@ -117,6 +117,34 @@ p.write_text(s)
 print("patched connman to be verbose on the console")
 PY
 
+# Make the installer's `guix system init` verbose so its progress (substitute
+# downloads, builds) is visible instead of a silent hang.
+python3 - "$SRC" <<'PY'
+import sys
+from pathlib import Path
+p = Path(sys.argv[1]) / "gnu/installer/final.scm"
+s = p.read_text()
+old = '"--fallback"'
+new = '"--fallback" "--verbosity=3"'
+assert s.count(old) == 1, f"expected one --fallback, found {s.count(old)}"
+p.write_text(s.replace(old, new, 1))
+print("patched installer install command with --verbosity=3")
+PY
+
+# Log every line the installer's commands print to the installer log, so the
+# full install output is captured and visible.
+python3 - "$SRC" <<'PY'
+import sys
+from pathlib import Path
+p = Path(sys.argv[1]) / "gnu/installer/utils.scm"
+s = p.read_text()
+old = '(list display)'
+new = '(list display %installer-log-line-hook)'
+assert s.count(old) == 1, f"expected one (list display), found {s.count(old)}"
+p.write_text(s.replace(old, new, 1))
+print("patched installer run-command to log output")
+PY
+
 # Sign the patched tree as an orphan commit (no parent), so that guix pull's
 # clone never tries to fetch the pinned commit's absent parent.
 gpg --batch --import /workspace/keys/private.key >/dev/null 2>&1
